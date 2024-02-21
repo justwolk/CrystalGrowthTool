@@ -11,11 +11,14 @@ import pandas as pd
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QAction, QGraphicsScene, QGraphicsView, QMenu, \
     QMessageBox, QVBoxLayout, QToolBar, QPushButton, QLabel, QSpinBox, QGraphicsEllipseItem, QDialog, QLineEdit, \
     QDoubleSpinBox, QCheckBox, QDockWidget, QTreeWidget, QTreeWidgetItem, QWidget, QAbstractItemView, QListWidget, \
-    QListWidgetItem
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QColor
+    QListWidgetItem, QShortcut
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QColor, QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QPointF, QTimer
 
 layers_and_points = []
+fnames = []
+current_layer = 0
+
 
 class PointAndLayerViewer(QWidget):
     def __init__(self, layers):
@@ -138,6 +141,7 @@ class SettingsDialog(QDialog):
         fname = QFileDialog.getOpenFileName(self, 'Открыть файл', '', "Excel files (*.xlsx *.xls)")
         if fname[0]:
             self.file_path.setText(fname[0])
+
 
     #сохранение значений в json
     def saveSettings(self):
@@ -332,7 +336,9 @@ class CustomGraphicsView(QGraphicsView):
         self.layers = [[]]
 
 
-    
+
+
+
 
 
 class ImageViewer(QMainWindow):
@@ -343,10 +349,15 @@ class ImageViewer(QMainWindow):
         self.setGeometry(100, 100, 1000, 800)
         self.initUI()
         self.view.layers = layers_and_points
+        self.view.layer = current_layer
         self.point_and_layer_viewer = PointAndLayerViewer(self.view.layers)
         self.point_and_layer_dock = QDockWidget("Слои и точки", self)
         self.point_and_layer_dock.setWidget(self.point_and_layer_viewer)
         self.addDockWidget(Qt.RightDockWidgetArea, self.point_and_layer_dock)
+
+        self.shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
+        self.shortcut.activated.connect(self.settingsDialog)
+
 
 
     def uncheck_other_buttons(self, button):
@@ -419,20 +430,24 @@ class ImageViewer(QMainWindow):
         self.setCentralWidget(self.view)
 
     def showDialog(self):
-        fname = QFileDialog.getOpenFileName(self, 'Открыть файл', '', "Images (*.png *.xpm *.jpg *.bmp *.gif)")
+        #xfname = QFileDialog.getOpenFileName(self, 'Открыть файл', '', "Images (*.png *.xpm *.jpg *.bmp *.gif)")
+        fnames, _ = QFileDialog.getOpenFileNames(self, 'Открыть файлы', '', "Images (*.png *.xpm *.jpg *.bmp *.gif)")
+        print(fnames)
+        print(fnames[0])
 
-        if fname[0]:
-            pixmap = QPixmap(fname[0])
-            self.scene.clear()
-            self.view.center_selected = False
-            self.view.points = []
-            self.view.layers = [[]]
-            self.view.center = QPoint(0, 0)
-            self.view.center_selected = False
-            self.count_points_button.setEnabled(False)
-            self.erase_points_button.setEnabled(False)
-            self.scene.addPixmap(pixmap)
-            self.view.setScene(self.scene)
+        #for fname in fnames:
+        pixmap = QPixmap(fnames[0])
+        self.scene.clear()
+        self.view.center_selected = False
+        self.view.points = []
+        self.view.layers = [[]]
+        self.view.center = QPoint(0, 0)
+        self.view.center_selected = False
+        self.count_points_button.setEnabled(False)
+        self.erase_points_button.setEnabled(False)
+        self.scene.addPixmap(pixmap)
+        self.view.setScene(self.scene)
+
 
     def closeImage(self):
         self.scene.clear()
@@ -473,8 +488,8 @@ class ImageViewer(QMainWindow):
             wb = load_workbook(self.excel_file)
         except FileNotFoundError:
             wb = Workbook()
-            
-        # откырваем или создаем файл
+
+        # открываем или создаем файл
         if self.sheet_name in wb.sheetnames:
             ws = wb[self.sheet_name]
         else:
@@ -485,11 +500,12 @@ class ImageViewer(QMainWindow):
         # записываем в файл
         for i, layer in enumerate(layers_and_points):
             for j, point in enumerate(layer):
-                ws.cell(row=start_row + i*2, column=start_col + j, value=point.x())
-                ws.cell(row=start_row + i*2 + 1, column=start_col + j, value=point.y())
+                x_coord = point.x()
+                y_coord = point.y()
+                ws.cell(row=start_row + i * 2, column=start_col + j, value=x_coord)
+                ws.cell(row=start_row + i * 2 + 1, column=start_col + j, value=y_coord)
 
         wb.save(self.excel_file)
-
 
     # открыть диалог настроек
     def settingsDialog(self):
@@ -532,3 +548,4 @@ if __name__ == '__main__':
     viewer = ImageViewer()
     viewer.show()
     sys.exit(app.exec_())
+
