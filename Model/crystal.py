@@ -19,11 +19,9 @@ class CrystalImage:
 
 
     def remove_point_by_index(self, grow_layer, index):
-        # Convert dictionary keys to a list
         keys_list = list(self.points.keys())
 
         if 0 <= index < len(keys_list):
-            # Get the key at the specified index
             key_to_remove = keys_list[index]
 
             if key_to_remove in self.points:
@@ -62,24 +60,15 @@ class CrystalImage:
         self.growth_lines.append(points)
 
     def to_dict(self):
-        #print(f"self.points:{self.points}")
         return {
             "image_path": self.image_path,
             "growth_lines": [list(map(lambda p: (p.x(), p.y()), line)) for line in self.growth_lines],
             "points": [(x, y, point.x(), point.y()) for (x, y), point in self.points.items()]        }
 
-    #@classmethod
-    # def from_dict(cls, data):
-    #     crystal = cls(data["image_path"])
-    #     crystal.growth_lines = [list(map(lambda p: QPoint(p[0], p[1]), line)) for line in data["growth_lines"]]
-    #     # Convert points back to the original format with QPoint
-    #     crystal.points = [(index, id, QPoint(x, y)) for index, id, x, y in data["points"]]
-    #     return crystal
     
     @classmethod
     def from_dict(cls, data):
         crystal = cls(data["image_path"])
         crystal.growth_lines = [list(map(lambda p: QPoint(p[0], p[1]), line)) for line in data["growth_lines"]]
-        # Convert points back to the original format with QPoint
         crystal.points = {(index, id): QPoint(x, y) for index, id, x, y in data["points"]}
         return crystal
