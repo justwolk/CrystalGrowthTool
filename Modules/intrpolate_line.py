@@ -19,7 +19,7 @@ def cubic_spline_interpolation(points):
     cs_x = CubicSpline(distance, points[:, 0])
     cs_y = CubicSpline(distance, points[:, 1])
 
-    n = 50 + 7 * len(points)
+    n = 40 + 6 * len(points)
     alpha = np.linspace(0, distance[-1], n)
 
     points_fitted = np.column_stack((cs_x(alpha), cs_y(alpha)))

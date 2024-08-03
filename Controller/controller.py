@@ -1,3 +1,4 @@
+import copy
 import math
 import os
 from PySide6.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
@@ -8,11 +9,10 @@ import openpyxl
 from Model.crystal import CrystalImage
 from PySide6 import QtCore
 
+from Modules.find_intersection import check_intersections, generate_points
+from Modules.intrpolate_line import cubic_spline_interpolation
 
 class Controller(QObject):
-    
-    ##### DEMO ######
-    task_bar_message = pyqtSignal(str, str)
     update_ui = pyqtSignal()
 
     def __init__(self, model):
@@ -22,60 +22,102 @@ class Controller(QObject):
         self.selected_grow_line_point_to_move = None
         self.grid_lines = None
 
-    def set_attribute(self, name, value):
-        if name in self._model._attributes:
-            self._model.update_attribute(name, value)
-            self._model.attributeChanged.emit(name, value)
+    #TODO MVC pattern = set, get через controller, а не напрямую через модель
 
-    def get_attribute(self, name):
-        if name in self._model._attributes:
-            return getattr(self._model, name)
-        return None
+    # def set_attribute(self, name, value):
+    #     if name in self._model._attributes:
+    #         self._model.update_attribute(name, value)
+    #         self._model.attributeChanged.emit(name, value)
+
+    # def get_attribute(self, name):
+    #     if name in self._model._attributes:
+    #         return getattr(self._model, name)
+    #     return None
+    
+    def save_project(self):
+        self._model.save_to_json()
     
     @pyqtSlot(int)
     def set_mode(self, mode):
         self.mode = mode
 
-    #def get_mode(self):
-    #    return self.mode
-    
+    def clear_all_points_on_image(self):
+        current_image = self._model.current_image
+        crystal_object = self._model.crystal_object[current_image]
+        crystal_object.clear_all_points()
+        self.update_ui.emit()
+
     def on_reverse_ui_toggled(self):
         self._model.ui_enabled = not self._model.ui_enabled
     
+    def transfer_layers_to_next_image(self):
+        if not self._model.crystal_object[self._model.current_image].growth_lines:
+            self._model.crystal_object[self._model.current_image].growth_lines = copy.deepcopy(self._model.crystal_object[self._model.current_image - 1].growth_lines)
+            self.clear_all_points_on_image()
+
     @pyqtSlot(int)
     def go_to_image(self, target_image):
-        self._model.current_image = target_image
+        total_images = len(self._model.crystal_object)
+        current_image = self._model.current_image
+        if 0 <= target_image <= total_images - 1:
+            self._model.current_image = target_image
 
-    @pyqtSlot()
+            if target_image - current_image == 1 and self._model.transfer_next_image == True: #если копируем
+                self.transfer_layers_to_next_image()
+                self.update_ui.emit()
+
     def go_next_image(self):
         self.go_to_image(self._model.current_image + 1)
 
-    @pyqtSlot()
     def go_previous_image(self):
         self.go_to_image(self._model.current_image - 1)
+
+    def go_next_layer(self):
+        self.go_to_layer(self._model.current_layer + 1)
+
+    def go_previous_layer(self):
+        self.go_to_layer(self._model.current_layer - 1)
 
     @pyqtSlot(int)
     def go_to_layer(self, target_layer):
         current_image = self._model.current_image
-        current_layer = self._model.current_layer
         crystal_object = self._model.crystal_object[current_image]
 
-        self._model.update_attribute('current_layer', target_layer)
-        if current_layer == len(crystal_object.growth_lines):
-            crystal_object.growth_lines.append([])
-        if current_layer > len(crystal_object.growth_lines):
-            crystal_object.growth_lines.append([])
-            #self.ui.layerInputValue.setText(str(len(crystal_object.growth_lines)+1))
-            self._model.current_layer = len(crystal_object.growth_lines)
+        if target_layer >= 0:
+            if len(crystal_object.growth_lines) - 1 < target_layer:
+                target_layer = len(crystal_object.growth_lines)
 
+            self._model.update_attribute('current_layer', target_layer)
+            current_layer = self._model.current_layer
 
-    @pyqtSlot(int)
-    def apply_entered_layer(self, layer_number):
-        self._model.current_layer = layer_number
+            if current_layer >= len(crystal_object.growth_lines):
+                crystal_object.growth_lines.append([])
+
+    @pyqtSlot()
+    def delete_layer(self): #жесткое удаление со сдвигом
+        current_image = self._model.current_image
+        crystal_object = self._model.crystal_object[current_image]
+        target_layer = self._model.current_layer
+        if target_layer >= 0 and target_layer < len(crystal_object.growth_lines):
+            del crystal_object.growth_lines[target_layer]
+            if self._model.current_layer > target_layer:
+                self._model.update_attribute('current_layer', self._model.current_layer - 1)
+            elif self._model.current_layer == target_layer:
+                new_current_layer = max(len(crystal_object.growth_lines) - 1, 0)
+                self._model.update_attribute('current_layer', new_current_layer)
+            self.update_ui.emit()
+
+    @pyqtSlot()
+    def delete_layer_points(self): #удаление только точек
+        current_image = self._model.current_image
+        crystal_object = self._model.crystal_object[current_image]
+        target_layer = self._model.current_layer
+        if target_layer >= 0 and target_layer < len(crystal_object.growth_lines):
+            crystal_object.growth_lines[target_layer] = []
+        self.update_ui.emit()
 
     def save_to_exсel(self, pixmap):
         try:
-            #pixmap = self._ui.image2.pixmap()
             workbook = openpyxl.Workbook()
             sheet = workbook.create_sheet(self._model.sheet_name)
             workbook.active = sheet
@@ -93,12 +135,13 @@ class Controller(QObject):
                 all_points_array[i, x, y] = value
 
             current_row = 0
-            for i in range(99):  # ступень
+            #TODO жесткий лимит на 199 ступеней и линий сетки
+            for i in range(199):  # ступень
                 if np.any(all_points_array[:, i, :]):
                     current_row += 2
                     sheet.cell(row=current_row, column=1, value=f"Ступень {i+1}")
 
-                    for j in range(99):  # линия сетки
+                    for j in range(199):  # линия сетки
                         if np.any(all_points_array[:, i, j]):
                             current_row += 1
                             if self._model.save_half:
@@ -119,11 +162,9 @@ class Controller(QObject):
         except Exception as e:
             print(f"Возникла ошибка: {e}")
 
-
-    @pyqtSlot()
-    def reset_center_position(self):
-        self._model.center_x = 360.5
-        self._model.center_y = 360.5
+    def reset_center_position(self, pixmap):
+        self._model.center_x = int(pixmap.width()/2)
+        self._model.center_y = int(pixmap.width()/2)
 
     @pyqtSlot(int, int)
     def apply_center_position(self, x, y):
@@ -144,30 +185,64 @@ class Controller(QObject):
                 cropped_img.save(os.path.join(new_folder_path, filename))
 
     @pyqtSlot(str)
-
     def image_folder_selected(self, folder_path):
         self._model.image_folder = folder_path
         files = os.listdir(folder_path)
         # отфильтровать и отсортировать картинки
-        self.photos = [file for file in files if file.lower().endswith(('.jpg', '.jpeg', '.png'))]
-        self.photos.sort()
-        self._model.crystal_object = [CrystalImage(photo_path) for photo_path in self.photos]
-        self._model.photos = self.photos #hz
+        photos = [file for file in files if file.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        photos.sort()
+        self._model.crystal_object = [CrystalImage(photo_path) for photo_path in photos]
+        self._model.photos = photos
+
+    @pyqtSlot()
+    def generate_points_layer(self):
+        growth_lines = self._model.crystal_object[self._model.current_image].growth_lines[self._model.current_layer]
+        if growth_lines:
+            if len(growth_lines) > 3:
+                growth_lines_to_calculate = cubic_spline_interpolation(growth_lines)
+
+                if self._model.interpolation_enabled: #TODO
+                    pass 
+                else:
+                    pass 
+
+                growth_lines_to_calculate = np.array([[point.x(), point.y()] for point in growth_lines_to_calculate])
+                lines = self.grid_lines
+                lines = np.array([[(point1.x(), point1.y()), (point2.x(), point2.y())] for point1, point2 in lines])
+
+                #result = check_intersections(lines, growth_lines_to_calculate)
+                result = generate_points(growth_lines_to_calculate, lines)
+
+                if self._model.interpolation_enabled: #TODO
+                    pass
+                else:
+                    print("Не работает")
+
+                for intersection, line_idx in result:
+                    intersection_point = QPoint(intersection[0], intersection[1])
+                    self._model.crystal_object[self._model.current_image].set_point(self._model.current_layer, line_idx, intersection_point)
+        self.update_ui.emit()
 
     @pyqtSlot(int)
-    def generate_points_layer(self, layer_number, image_number):
-        pass
-
-    @pyqtSlot(int)
-    def generate_points_image(self, image_number):
-        pass
+    def generate_points_image(self):
+        current_layer = self._model.current_layer
+        growth_lines_count = len(self._model.crystal_object[self._model.current_image].growth_lines)
+        for layer in range(growth_lines_count):
+            self._model.current_layer = layer
+            self.generate_points_layer()
+        self.update_ui.emit()
+        self._model.current_layer = current_layer
 
     @pyqtSlot()
     def generate_points_all(self):
-        pass
+        image_count = len(self._model.crystal_object)
+        current_image = self._model.current_image
+        for image_number in range(image_count):
+            self.go_to_image(image_number)
+            self.generate_points_image()
+        self.update_ui.emit()
+        self._model.current_image = current_image
 
-    ###################################
-    ##################################TODO
     def process_second_image_clicked(self, event, original_size, current_size):
         click_pos = event.pos()
         #пересчитать правильную координату клика на изображение, так как размер окна под картинку != исходному размеру картинки
@@ -176,82 +251,117 @@ class Controller(QObject):
         current_layer = self._model.current_layer
         crystal_object = self._model.crystal_object[current_image]
 
-        #удалить точку для передвижения, если выбран другой режим
-        if self.selected_grow_line_point_to_move != None and self.mode != 4:
-            self.selected_grow_line_point_to_move = None
+        if event.button() == QtCore.Qt.LeftButton:
 
-        #выбрать центр = 1
-        if self.mode == 1:
-            self.apply_center_position(newClickPos.x(), newClickPos.y())
+            #удалить точку для передвижения, если выбран другой режим
+            if self.selected_grow_line_point_to_move != None and self.mode != 4:
+                self.selected_grow_line_point_to_move = None
 
-        #добавить точку линии роста = 3
-        elif self.mode == 3:
-            if not crystal_object.growth_lines:
-                crystal_object.growth_lines.append([newClickPos])
-            else:
-                crystal_object.growth_lines[current_layer].append(newClickPos)
+            if self.mode == 1: #выбрать центр
+                self.apply_center_position(newClickPos.x(), newClickPos.y())
+
+            elif self.mode == 3: #добавить точку линии роста
+                if not crystal_object.growth_lines:
+                    crystal_object.growth_lines.append([newClickPos])
+                else:
+                    crystal_object.growth_lines[current_layer].append(newClickPos)
+            
+            elif self.mode == 4: #двигать точку линии роста
+                    clickThreshold = 100  # пикселей
+                    points = crystal_object.growth_lines[current_layer]
+                    # ищем самую близкую точку для удаления
+                    if self.selected_grow_line_point_to_move: #TODO
+                        closestPoint = None
+                        minDistance = float('inf')
+                        for point in crystal_object.growth_lines[current_layer]:
+                            distance = (point - self.selected_grow_line_point_to_move).manhattanLength()
+                            if distance < minDistance:
+                                minDistance = distance
+                                closestPoint = point
+                        crystal_object.growth_lines[current_layer][points.index(closestPoint)] = newClickPos
+                        self.selected_grow_line_point_to_move = None
+                    else:
+                        self.selected_grow_line_point_to_move = newClickPos
         
-        #двигать точку линии роста mode = 4
-        elif self.mode == 4:
-                clickThreshold = 100  # пикселей
-                points = crystal_object.growth_lines[current_layer]
-                # ищем самую близкую точку для удаления
-                if self.selected_grow_line_point_to_move: #TODO
+            elif self.mode == 5: #удалить точку линии роста = 5
+                    clickThreshold = 100  # пикселей
+                    # ищем самую близкую точку для удаления
                     closestPoint = None
                     minDistance = float('inf')
                     for point in crystal_object.growth_lines[current_layer]:
-                        distance = (point - self.selected_grow_line_point_to_move).manhattanLength()
+                        distance = (point - newClickPos).manhattanLength()
                         if distance < minDistance:
                             minDistance = distance
                             closestPoint = point
-                    crystal_object.growth_lines[current_layer][points.index(closestPoint)] = newClickPos
-                    self.selected_grow_line_point_to_move = None
-                else:
-                    self.selected_grow_line_point_to_move = newClickPos
-      
-        #удалить точку линии роста = 5
-        elif self.mode == 5:
-                clickThreshold = 100  # пикселей
-                # ищем самую близкую точку для удаления
+
+                    if minDistance <= clickThreshold:
+                        crystal_object.growth_lines[current_layer].remove(closestPoint)
+    
+            elif self.mode == 7: #выбрать точки роста
+                    is_magnet_enabled = self._model.magnet_enabled
+                    is_override_line = self._model.override_line
+
+                    closest_line = min(self.grid_lines, key=lambda line: self.distance_to_line(newClickPos, line))
+                    clicked_line_index = self.grid_lines.index(closest_line) + 1
+                    print(f"Линия кликнута: {clicked_line_index}")
+                    print(f"newClickPos: {newClickPos}")
+
+                    if is_override_line == False:
+                        if is_magnet_enabled == True:
+                            recalculated_point = self.recalculate_point_on_line(newClickPos, clicked_line_index - 1)
+                            crystal_object.set_point(current_layer, clicked_line_index - 1, recalculated_point)
+                        else:
+                            crystal_object.set_point(current_layer, clicked_line_index - 1, newClickPos)
+
+                    else:
+                        line_to_override = int(self.ui.textEdit_2.text()) - 1
+                        if isinstance(line_to_override, int):
+                            if self._model.magnet_enabled == True:
+                                recalculated_point = self.recalculate_point_on_line(newClickPos, clicked_line_index - 1)
+                                crystal_object.set_point(current_layer, line_to_override, recalculated_point)
+                            else:
+                                crystal_object.set_point(current_layer, line_to_override, newClickPos)
+
+            elif self.mode == 10: #удалить точку
+                point_list = crystal_object.get_values_by_grow_layer(current_layer)
+                closest_point_index = self.find_nearest_point(newClickPos, point_list)
+                closest_line = min(self.grid_lines, key=lambda line: self.distance_to_line(newClickPos, line))
+                clicked_line_index = self.grid_lines.index(closest_line) 
+
+                print(closest_point_index)
+                if closest_point_index is not None:
+                    crystal_object.remove_point(current_layer, clicked_line_index)            
+
+        if event.button() == QtCore.Qt.RightButton:
+            clickThreshold = 100  # пикселей
+            points = crystal_object.growth_lines[current_layer]
+            if self.selected_grow_line_point_to_move: #TODO
                 closestPoint = None
                 minDistance = float('inf')
                 for point in crystal_object.growth_lines[current_layer]:
-                    distance = (point - newClickPos).manhattanLength()
+                    distance = (point - self.selected_grow_line_point_to_move).manhattanLength()
                     if distance < minDistance:
                         minDistance = distance
                         closestPoint = point
-
-                if minDistance <= clickThreshold:
-                    crystal_object.growth_lines[current_layer].remove(closestPoint)
-   
-        #выбрать точки роста = 7
-        elif self.mode == 7:
-                is_magnet_enabled = self._model.magnet_enabled
-                is_override_line = self._model.override_line
-
-                closest_line = min(self.grid_lines, key=lambda line: self.distance_to_line(newClickPos, line))
-                clicked_line_index = self.grid_lines.index(closest_line) + 1
-                print(f"Линия кликнута: {clicked_line_index}")
-                print(f"newClickPos: {newClickPos}")
-
-                if is_override_line == False:
-                    if is_magnet_enabled == True:
-                        recalculated_point = self.recalculate_point_on_line(newClickPos, clicked_line_index - 1)
-                        crystal_object.set_point(current_layer, clicked_line_index - 1, recalculated_point)
-                    else:
-                        crystal_object.set_point(current_layer, clicked_line_index - 1, newClickPos)
-
-                else:
-                    line_to_override = int(self.ui.textEdit_2.text()) - 1
-                    if isinstance(line_to_override, int):
-                        if self._model.magnet_enabled == True:
-                            recalculated_point = self.recalculate_point_on_line(newClickPos, clicked_line_index - 1)
-                            crystal_object.set_point(current_layer, line_to_override, recalculated_point)
-                        else:
-                            crystal_object.set_point(current_layer, line_to_override, newClickPos)
+                crystal_object.growth_lines[current_layer][points.index(closestPoint)] = newClickPos
+                self.selected_grow_line_point_to_move = None
+            else:
+                self.selected_grow_line_point_to_move = newClickPos
 
         self.update_ui.emit()
 
+    def find_nearest_point(self, clicked_point, points_list):
+        closest_point_index = None
+        min_distance = float('inf')
+
+        for i, point in enumerate(points_list):
+            if point is not None:
+                distance = abs(clicked_point.x() - point.x()) + abs(clicked_point.y() - point.y())
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_point_index = i
+
+        return closest_point_index
 
     def recalculate_point(self, original_size, current_size, point):
         scaleX = original_size.width() / current_size.width()
@@ -281,7 +391,3 @@ class Controller(QObject):
         recalculated_point = QtCore.QPoint(start_point.x() + t * dx, start_point.y() + t * dy)
 
         return recalculated_point
-
-
-
-    

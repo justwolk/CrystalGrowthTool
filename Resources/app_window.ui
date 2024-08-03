@@ -13,8 +13,19 @@
   <property name="windowTitle">
    <string>CrystalGrowthTool</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>favicon.ico</normaloff>
+    <normalon>favicon.ico</normalon>favicon.ico</iconset>
+  </property>
   <property name="windowOpacity">
    <double>1.000000000000000</double>
+  </property>
+  <property name="iconSize">
+   <size>
+    <width>48</width>
+    <height>48</height>
+   </size>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
@@ -39,7 +50,7 @@
      </sizepolicy>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="MainScreen">
      <attribute name="title">
@@ -64,7 +75,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>../../../../.designer/.designer/backup/19.jpg</pixmap>
+       <pixmap>../../../../../../.designer/.designer/backup/19.jpg</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -89,7 +100,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>../../../../.designer/.designer/backup/19.jpg</pixmap>
+       <pixmap>../../../../../../.designer/.designer/backup/19.jpg</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -191,19 +202,6 @@
        <string>Число делений сетки</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="buttonSaveSettings">
-      <property name="geometry">
-       <rect>
-        <x>390</x>
-        <y>330</y>
-        <width>171</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Сохранить</string>
-      </property>
-     </widget>
      <widget class="QLabel" name="labelNmValue">
       <property name="geometry">
        <rect>
@@ -217,7 +215,7 @@
        <string>Масштаб снимка, мкм</string>
       </property>
      </widget>
-     <widget class="QCheckBox" name="heckboxHalfInvisible">
+     <widget class="QCheckBox" name="checkboxHalfInvisible">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -272,7 +270,7 @@
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>410</y>
+        <y>340</y>
         <width>121</width>
         <height>21</height>
        </rect>
@@ -285,7 +283,7 @@
       <property name="geometry">
        <rect>
         <x>150</x>
-        <y>410</y>
+        <y>340</y>
         <width>111</width>
         <height>22</height>
        </rect>
@@ -298,7 +296,7 @@
       <property name="geometry">
        <rect>
         <x>280</x>
-        <y>410</y>
+        <y>340</y>
         <width>111</width>
         <height>22</height>
        </rect>
@@ -311,7 +309,7 @@
       <property name="geometry">
        <rect>
         <x>500</x>
-        <y>410</y>
+        <y>340</y>
         <width>75</width>
         <height>24</height>
        </rect>
@@ -364,7 +362,7 @@
       <property name="geometry">
        <rect>
         <x>410</x>
-        <y>410</y>
+        <y>340</y>
         <width>75</width>
         <height>24</height>
        </rect>
@@ -492,6 +490,25 @@
      </widget>
      <widget class="QCheckBox" name="checkboxInterpolation">
       <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>310</y>
+        <width>271</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Интерполяция</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkboxTransferNextImage">
+      <property name="enabled">
        <bool>true</bool>
       </property>
       <property name="geometry">
@@ -503,10 +520,10 @@
        </rect>
       </property>
       <property name="text">
-       <string>Интерполяция</string>
+       <string>Копировать ступени на следующий снимок</string>
       </property>
       <property name="checked">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
      </widget>
     </widget>
@@ -553,7 +570,7 @@
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QLineEdit" name="inputLayerValue">
+   <widget class="QLineEdit" name="inputLayerNumber">
     <property name="geometry">
      <rect>
       <x>250</x>
@@ -575,7 +592,7 @@
    </widget>
    <widget class="QCheckBox" name="checkboxShowOnImage">
     <property name="enabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -606,6 +623,9 @@
     </property>
    </widget>
    <widget class="QCheckBox" name="checkboxSelectGridLine">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>690</x>
@@ -643,11 +663,9 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionOpenImages"/>
    <addaction name="actionCropImage"/>
    <addaction name="actionSave"/>
    <addaction name="actionReverseInterface"/>
-   <addaction name="actionOpenProject"/>
    <addaction name="actionSaveAsProject"/>
   </widget>
   <widget class="QToolBar" name="toolBar_2">
@@ -660,12 +678,13 @@
    <attribute name="toolBarBreak">
     <bool>true</bool>
    </attribute>
-   <addaction name="actionPreviousLayer"/>
-   <addaction name="actionNextLayer"/>
+   <addaction name="actionPreviousImage"/>
+   <addaction name="actionNextImage"/>
    <addaction name="actionSelectCenter"/>
-   <addaction name="actionSelectDots"/>
-   <addaction name="actionDeleteLastPoint"/>
-   <addaction name="actionGeneratePoints"/>
+   <addaction name="actionSelectCoordinates"/>
+   <addaction name="actionDeleteCoordinate"/>
+   <addaction name="actionGenerateOnLayer"/>
+   <addaction name="actionGenerateOnImage"/>
    <addaction name="actionGenerateAll"/>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -688,62 +707,30 @@
    <attribute name="toolBarBreak">
     <bool>true</bool>
    </attribute>
-   <addaction name="actionAddGrowLinePoint"/>
-   <addaction name="actionMoveGrowLinePoint"/>
-   <addaction name="actionDeleteGrowLinePoint"/>
-   <addaction name="actionDeleteGrowLineLayer"/>
+   <addaction name="actionAddLayerPoint"/>
+   <addaction name="actionMoveLayerPoint"/>
+   <addaction name="actionDeleteLayerPoint"/>
+   <addaction name="actionDeleteLayer"/>
+   <addaction name="actionDeleteLayerPoints"/>
+   <addaction name="actionDeleteAllPoints"/>
+   <addaction name="actionNextLayer"/>
+   <addaction name="actionPreviousLayer"/>
   </widget>
-  <action name="actionOpenImages">
-   <property name="text">
-    <string>Открыть снимки</string>
-   </property>
-   <property name="toolTip">
-    <string>Открывает серию снимков</string>
-   </property>
-   <property name="visible">
-    <bool>true</bool>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionClose">
-   <property name="text">
-    <string>Закрыть (C)</string>
-   </property>
-   <property name="toolTip">
-    <string>Закрыть (C)</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
   <action name="actionSave">
    <property name="text">
-    <string>Сохранить в Excel (Ctrl+S)</string>
+    <string>Сохранить в Excel</string>
    </property>
    <property name="toolTip">
-    <string>Сохранить в excel (Ctrl+S)</string>
+    <string>Сохраняет данные в выбранный в настройках файл (Ctrl+Shift+S)</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+S</string>
+    <string>Ctrl+Shift+S</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionSettings">
-   <property name="text">
-    <string>Настройки (P)</string>
-   </property>
-   <property name="toolTip">
-    <string>Настройки (P)</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionNextLayer">
+  <action name="actionNextImage">
    <property name="text">
     <string>След. снимок (&gt;)</string>
    </property>
@@ -757,7 +744,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionPreviousLayer">
+  <action name="actionPreviousImage">
    <property name="text">
     <string>Пред. снимок (&lt;)</string>
    </property>
@@ -785,23 +772,12 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionGrowLines">
-   <property name="text">
-    <string>Линии роста (B)</string>
-   </property>
-   <property name="toolTip">
-    <string>Линии роста (B)</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionSelectDots">
+  <action name="actionSelectCoordinates">
    <property name="text">
     <string>Выбрать координаты (N)</string>
    </property>
    <property name="toolTip">
-    <string>Выбрать точки (N)</string>
+    <string>Выбрать координаты (N)</string>
    </property>
    <property name="shortcut">
     <string>N</string>
@@ -810,7 +786,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionAddGrowLinePoint">
+  <action name="actionAddLayerPoint">
    <property name="text">
     <string>Добавить точку ступени (T)</string>
    </property>
@@ -824,7 +800,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionMoveGrowLinePoint">
+  <action name="actionMoveLayerPoint">
    <property name="text">
     <string>Двигать точку ступени (Y)</string>
    </property>
@@ -838,7 +814,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionDeleteGrowLinePoint">
+  <action name="actionDeleteLayerPoint">
    <property name="checked">
     <bool>false</bool>
    </property>
@@ -846,10 +822,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Удалить точку ступени (Insert)</string>
+    <string>Удалить точку ступени [Insert] </string>
    </property>
    <property name="toolTip">
-    <string>Удалить точку ступени (Insert)</string>
+    <string>Удаляет ближайшую точку текущей ступени к точке клика мышью</string>
    </property>
    <property name="shortcut">
     <string>Ins</string>
@@ -858,7 +834,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionNewGrowLineLayer">
+  <action name="actionDeleteLayer">
    <property name="checked">
     <bool>false</bool>
    </property>
@@ -866,58 +842,21 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>(I)</string>
-   </property>
-   <property name="toolTip">
-    <string>Новая ступень (I)</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionSelectGrowLineLayer">
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>[]</string>
-   </property>
-   <property name="toolTip">
-    <string>Новый слой (I)</string>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionDeleteGrowLineLayer">
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Удалить ступень [Ctrl+Shift+Del]</string>
-   </property>
-   <property name="toolTip">
     <string>Удалить ступень</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+Del</string>
+   <property name="toolTip">
+    <string>Удалить ступень (со сдвигом следющих на 1 назад)</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionDeleteLastPoint">
+  <action name="actionDeleteCoordinate">
    <property name="text">
-    <string>Удалить координату [Del]</string>
+    <string>Удалить координату [Del] </string>
    </property>
    <property name="toolTip">
-    <string>Удалить координату</string>
+    <string>Удаляет ближайшую координату к точке клика мыши на текущей ступени текущего снимка</string>
    </property>
    <property name="shortcut">
     <string>Del</string>
@@ -931,7 +870,7 @@
   </action>
   <action name="actionCropImage">
    <property name="text">
-    <string>Обрезать серию картинок</string>
+    <string>Обрезать серию снимков</string>
    </property>
    <property name="toolTip">
     <string>Обрезать серию картинок</string>
@@ -945,30 +884,19 @@
   </action>
   <action name="actionSaveAsProject">
    <property name="text">
-    <string>Сохранить как проект [НЕ РАБ]</string>
+    <string>Сохранить проект</string>
    </property>
    <property name="toolTip">
-    <string>Сохранить как проект(Ctrl+Shift+S)</string>
+    <string>Сохранить изменения в проекте (Ctrl+S)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionOpenProject">
-   <property name="text">
-    <string>Открыть проект[НЕ РАБ]</string>
-   </property>
-   <property name="toolTip">
-    <string>Открыть файлы</string>
-   </property>
-   <property name="visible">
-    <bool>true</bool>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionGeneratePoints">
+  <action name="actionGenerateOnLayer">
    <property name="text">
     <string>Сгенерировать на ступени [Ctrl + O]</string>
    </property>
@@ -985,7 +913,7 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionGenerateAll">
+  <action name="actionGenerateOnImage">
    <property name="text">
     <string>Сгенерировать на снимке [Ctrl+P]</string>
    </property>
@@ -1002,26 +930,12 @@
     <enum>QAction::NoRole</enum>
    </property>
   </action>
-  <action name="actionSavePNG">
-   <property name="text">
-    <string>Сохранить png [НЕ РАБ]</string>
-   </property>
-   <property name="toolTip">
-    <string>Сохранить png</string>
-   </property>
-   <property name="visible">
-    <bool>true</bool>
-   </property>
-   <property name="menuRole">
-    <enum>QAction::NoRole</enum>
-   </property>
-  </action>
-  <action name="actionGenerateAllEverything">
+  <action name="actionGenerateAll">
    <property name="text">
     <string>Сгенерировать везде</string>
    </property>
    <property name="toolTip">
-    <string>Сгенерировать везде</string>
+    <string>Сгенерировать точки на всех снимках</string>
    </property>
    <property name="visible">
     <bool>true</bool>
@@ -1045,6 +959,80 @@
    </property>
    <property name="visible">
     <bool>true</bool>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionDeleteLayerPoints">
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Удалить точки ступени</string>
+   </property>
+   <property name="toolTip">
+    <string>Удалить все точки выбранной ступени (без сдвига)</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionDeleteAllPoints">
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Очистить все координаты</string>
+   </property>
+   <property name="toolTip">
+    <string>Удалить все выбранные координаты на текущем снимке</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionNextLayer">
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Ступень + ([)</string>
+   </property>
+   <property name="toolTip">
+    <string>Удалить все выбранные координаты на текущем снимке</string>
+   </property>
+   <property name="shortcut">
+    <string>[</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionPreviousLayer">
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Ступень - (])</string>
+   </property>
+   <property name="toolTip">
+    <string>Удалить все выбранные координаты на текущем снимке</string>
+   </property>
+   <property name="shortcut">
+    <string>]</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>

@@ -1,6 +1,5 @@
 from PySide6.QtCore import QPoint
 
-
 class CrystalImage:
     def __init__(self, image_path):
         self.image_path = image_path
@@ -13,10 +12,8 @@ class CrystalImage:
     def remove_point(self, x, y):
         if (x, y) in self.points:
             del self.points[(x, y)]
-            #print(self.points)
         else:
-            print(f"Point ({x}, {y}) does not exist.")
-
+            print(f"Координата ({x}, {y}) не существует.")
 
     def remove_point_by_index(self, grow_layer, index):
         keys_list = list(self.points.keys())
@@ -26,26 +23,26 @@ class CrystalImage:
 
             if key_to_remove in self.points:
                 del self.points[key_to_remove]
-                print(f"Removed point at index {index}: {key_to_remove}")
+                print(f"Удалена координата по индеку {index}: {key_to_remove}")
             else:
-                print(f"Point {key_to_remove} does not exist.")
+                print(f"Координата {key_to_remove} не существует.")
         else:
-            print(f"Invalid index: {index}. Index must be within the range [0, {len(keys_list) - 1}].")
-
+            print(f"Неверный индекс: {index}. Индекс должен находиться в диапазоне [0, {len(keys_list) - 1}].")
 
     def get_points(self):
-        #print(f"selfpoints: {self.points}")
         unique_points = [(value, point) for value, point in self.points]
         return unique_points
 
     def get_points_to_draw(self):
         if isinstance(self.points, dict):
             unique_points = [(x, y, value) for (x, y), value in self.points.items()]
-            #print("NOT ERROR")
             return unique_points
         else:
-            print("Error: self.points is not a dictionary.")
+            print("Ошибка: self.points не является словарем.")
             return []
+        
+    def clear_all_points(self):
+        self.points = {}
 
     def get_points_by_grow_layer(self, layer):
         layer_points = [(x, y, value) for (x, y), value in self.points.items() if y == layer]
@@ -54,7 +51,6 @@ class CrystalImage:
     def get_values_by_grow_layer(self, layer):
         layer_values = [value for (x, y), value in self.points.items() if x == layer]
         return layer_values
-
 
     def add_growth_line(self, points):
         self.growth_lines.append(points)
@@ -65,10 +61,10 @@ class CrystalImage:
             "growth_lines": [list(map(lambda p: (p.x(), p.y()), line)) for line in self.growth_lines],
             "points": [(x, y, point.x(), point.y()) for (x, y), point in self.points.items()]        }
 
-    
     @classmethod
     def from_dict(cls, data):
         crystal = cls(data["image_path"])
         crystal.growth_lines = [list(map(lambda p: QPoint(p[0], p[1]), line)) for line in data["growth_lines"]]
+        # Convert points back to the original format with QPoint
         crystal.points = {(index, id): QPoint(x, y) for index, id, x, y in data["points"]}
         return crystal
