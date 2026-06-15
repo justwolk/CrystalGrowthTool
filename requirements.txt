@@ -1,0 +1,6 @@
+matplotlib
+numpy
+openpyxl
+Pillow
+PySide2
+scipy
